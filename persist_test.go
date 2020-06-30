@@ -25,9 +25,13 @@ func TestPut(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	key := "key"
-	var value string
-	if err := Get(key, &value); err != nil {
+	var got string
+	if err := Get(key, &got); err != nil {
 		t.Errorf("Failed to get key \"%s\" from db %s. %s", key, dbname, err)
+	}
+	want := "value"
+	if got != want {
+		t.Errorf("value = \"%s\"; wanted \"%s\"", got, want)
 	}
 }
 
@@ -42,8 +46,8 @@ func TestClose(t *testing.T) {
 
 func Example() {
 	// Open db file
-	Must(Open("path/to/mydb.db"))
-	// Alway close the file
+	Must(Open("mydb.db"))
+	// Always close the file
 	defer Close()
 	// Store a value with the key "key"
 	if err := Put("key", "value"); err != nil {
@@ -55,4 +59,3 @@ func Example() {
 
 	fmt.Println(value) // Output: value
 }
-
