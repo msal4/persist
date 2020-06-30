@@ -27,7 +27,7 @@ type Store struct {
 	store map[string]interface{}
 }
 
-// Creates and new store.
+// Creates a new store.
 func NewStore(path string) *Store {
 	return &Store{path: path, store: map[string]interface{}{}}
 }
