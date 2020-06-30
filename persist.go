@@ -16,72 +16,72 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 )
 
-var (
+type Store struct {
+	// The db file path
+	path string
 	// The db file to be used for reading and storing the key value pairs.
 	db *os.File
 	// The decoded map containing the key-value pairs in the db file.
-	store = map[string]interface{}{}
-)
+	store map[string]interface{}
+}
+
+// Creates and new store.
+func NewStore(path string) *Store {
+	return &Store{path: path, store: map[string]interface{}{}}
+}
 
 // Opens the store file with the specified path.
 // If the `path` does not exist it will be created otherwise
 // the existing file will be used.
 // The connection must be closed using `persist.Close()`.
-func Open(path string) error {
-	var err error
-	db, err = os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+func (s *Store) Open() error {
+	db, err := os.OpenFile(s.path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
+	s.db = db
 	decoder := gob.NewDecoder(db)
-	if err := decoder.Decode(&store); err != nil && err != io.EOF {
+	if err := decoder.Decode(&s.store); err != nil && err != io.EOF {
 		return err
 	}
-	return err
+	return nil
 }
 
 // Persists a new key value pair in the store file.
 // The value must be a premitive type (string, bool, int, etc.).
-func Put(key string, value interface{}) error {
-	store[key] = value
+func (s *Store) Put(key string, value interface{}) error {
+	if s.db == nil {
+		return fmt.Errorf("db is not opened")
+	}
+	s.store[key] = value
 	// Clear the file content for the new store map.
 	// This could be optimized but for the simple use cases of this package
 	// it does not make a huge difference.
-	if _, err := db.Seek(0, 0); err != nil {
+	if _, err := s.db.Seek(0, 0); err != nil {
 		return err
 	}
-	if err := db.Truncate(0); err != nil {
+	if err := s.db.Truncate(0); err != nil {
 		return err
 	}
 	// Encode the new store map and write it to the db file.
-	encoder := gob.NewEncoder(db)
-	return encoder.Encode(store)
+	encoder := gob.NewEncoder(s.db)
+	return encoder.Encode(s.store)
 }
 
 // Gets the value with the specified key from the store.
-// The value must be a pointer to a premitive value (string, int, bool, etc.)
-// otherwise an error will be returned.
-func Get(key string, value interface{}) error {
-	if v, ok := store[key]; ok {
-		val := reflect.ValueOf(value)
-		// Check if the value is not a pointer.
-		if val.Kind() != reflect.Ptr {
-			return fmt.Errorf("persist.Get: value must be a pointer")
-		}
-		// Set the value from the store map to the value pointer.
-		val.Elem().Set(reflect.ValueOf(v))
-		return nil
+func (s Store) Get(key string) (interface{}, error) {
+	if v, ok := s.store[key]; ok {
+		return v, nil
 	}
-	return fmt.Errorf("No value is stored with the specified key")
+	return nil, fmt.Errorf("No value is stored with the specified key")
 }
 
 // Closes the store, rendering it usable for I/O by other connections.
-func Close() error {
-	if db != nil {
-		return db.Close()
+func (s *Store) Close() error {
+	if s.db != nil {
+		return s.db.Close()
 	}
 	return fmt.Errorf("There is no open connection")
 }

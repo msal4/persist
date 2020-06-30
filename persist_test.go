@@ -9,25 +9,22 @@ import (
 	"testing"
 )
 
-var dbname = "testdb.db"
-
-func TestOpen(t *testing.T) {
-	if err := Open(dbname); err != nil {
-		t.Errorf("Failed to create/open db file %s. %s", dbname, err)
-	}
-}
-
 func TestPut(t *testing.T) {
-	if err := Put("key", "value"); err != nil {
-		t.Errorf("Failed to put to db %s. %s", dbname, err)
+	s := NewStore("testdb.db")
+	if err := s.Open(); err != nil {
+		t.Errorf("Failed to create/open db file %s. %s", s.path, err)
 	}
-}
+	defer s.Close()
+	defer os.Remove(s.path)
+	if err := s.Put("key", "value"); err != nil {
+		t.Errorf("Failed to put to db %s. %s", s.path, err)
+	}
 
-func TestGet(t *testing.T) {
 	key := "key"
-	var got string
-	if err := Get(key, &got); err != nil {
-		t.Errorf("Failed to get key \"%s\" from db %s. %s", key, dbname, err)
+	got, err := s.Get(key)
+	if err != nil {
+		t.Errorf("Failed to get key \"%s\" from db %s. %s", key, s.path, err)
+		return
 	}
 	want := "value"
 	if got != want {
@@ -35,27 +32,36 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestClose(t *testing.T) {
-	if err := Close(); err != nil {
-		t.Errorf("Failed to close file %s", dbname)
+func TestGet(t *testing.T) {
+	s := NewStore("testdb.db")
+	if err := s.Open(); err != nil {
+		t.Errorf("Failed to create/open db file %s. %s", s.path, err)
 	}
-	if err := os.Remove(dbname); err != nil {
-		t.Errorf("Failed to remove file %s", dbname)
+	defer s.Close()
+	defer os.Remove(s.path)
+
+	key := "key"
+	_, err := s.Get(key)
+	if err == nil {
+		t.Errorf("Get should return an error for \"%s\" \"%s\"", key, s.path)
+		return
 	}
 }
 
 func Example() {
+	// Create a new Store
+	s := NewStore("mydb.db")
 	// Open db file
-	Must(Open("mydb.db"))
+	Must(s.Open())
 	// Always close the file
-	defer Close()
+	defer s.Close()
 	// Store a value with the key "key"
-	if err := Put("key", "value"); err != nil {
+	if err := s.Put("key", "value"); err != nil {
 		fmt.Println(err)
 	}
 	// Get the value
-	var value string
-	Get("key", &value)
+	v, _ := s.Get("key")
+	value := v.(string)
 
 	fmt.Println(value) // Output: value
 }
