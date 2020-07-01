@@ -16,9 +16,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 )
 
 type Store struct {
+	mux sync.Mutex
 	// The db file path
 	path string
 	// The db file to be used for reading and storing the key value pairs.
@@ -55,6 +57,8 @@ func (s *Store) Put(key string, value interface{}) error {
 	if s.db == nil {
 		return fmt.Errorf("db is not opened")
 	}
+	s.mux.Lock()
+	defer s.mux.Unlock()
 	s.store[key] = value
 	// Clear the file content for the new store map.
 	// This could be optimized but for the simple use cases of this package
@@ -71,7 +75,7 @@ func (s *Store) Put(key string, value interface{}) error {
 }
 
 // Gets the value with the specified key from the store.
-func (s Store) Get(key string) (interface{}, error) {
+func (s *Store) Get(key string) (interface{}, error) {
 	if v, ok := s.store[key]; ok {
 		return v, nil
 	}
@@ -86,9 +90,3 @@ func (s *Store) Close() error {
 	return fmt.Errorf("There is no open connection")
 }
 
-// Ensures the function runs without an error, otherwise it panics.
-func Must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
