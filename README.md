@@ -1,6 +1,6 @@
 # persist
-A simple key value pair storage for simple use cases, it can
-store premitive values such as strings, integers and booleans.
+A key-value pair storage for simple use cases, used to
+store premitive values.
 
 ### Example:
 
