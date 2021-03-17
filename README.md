@@ -32,4 +32,4 @@ func main() {
 ```
 
 ### Note:
-This package is meant for simple use cases, if you intend to write to it extensively or store large pieces of data, I recommend using something like boltdb.
+Don't use it.
